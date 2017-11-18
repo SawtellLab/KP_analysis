@@ -1,0 +1,7 @@
+var v60% := ViewFind("20171107_002");
+FrontView(v60%);
+CursorActive(0,14, 1, 0, "", "", 1);   'Data points
+CursorActive(3,16, 0, "Cursor(0)+0.006");   'Expression
+CursorActive(4,16, 0, "Cursor(0)+0.056");   'Expression
+CursorActive(5,16, 0, "Cursor(0)+0.0765");   'Expression
+CursorActive(6,16, 0, "Cursor(0)+0.1255");   'Expression

@@ -1,8 +1,9 @@
-exptname = '20170824_007';
-
+exptname = '20171010_007';
+%%
 load(['C:\Users\kperks\spikedata\matdata\' exptname '\' exptname '.mat'])
 %%
-expt = ImportExpt_Spike7('C:\Users\kperks\spikedata\matdata\',exptname,0.16)
+
+expt = ImportExpt_Spike7('C:\Users\kperks\spikedata\matdata\',exptname,0.16,0)
 %%
 stimonset_t = 0.075;
 stimonset_samp = round(stimonset_t/expt.meta.dt);
@@ -19,32 +20,58 @@ xtime = [1:size(datamat,2)]*expt.meta.dt*1000;
 % figure;plot(xtime,datamat')
 
 %%
-a = filtesweeps(expt,0,'latency',latwin,'time',[190:0.0001:260]);
-datamat = a.wc.Vm - median(a.wc.Vm(:,baselinewin),2);
-figure;plot(xtime,datamat(1,:)')
+IIH = [];
+for isweep = 1:size(expt.wc.Vm,1)
+    
+    thissweep = (find(expt.wc.CmdTrig(isweep,:)));
+    
+    if ~isempty(thissweep) && size(thissweep,2) > 1
+       IIH(isweep) = (thissweep(2)-thissweep(1))*expt.meta.dt*1000;
+    end
+    if isempty(thissweep) || size(thissweep,2) == 1
+        IIH(isweep) = NaN;
+    end
+end
+
+
+%%
+a = filtesweeps(expt,0,'time',[513:0.0001:519]);
+datamat = a.wc.Vm;% - median(a.wc.Vm(:,baselinewin),2);
+figure;plot(xtime,mean(datamat(:,:),1)')
 %% spikes with change in object position
 % for i = 1:size(Objall,1)
 % close all
-G = 500;%Globall(i); %
-Obj = -30;%Objall(i); %
+G = 450;%Globall(i); %
+Obj = 30;%Objall(i); %
 
 a = filtesweeps(expt,0,'latency',latwin,'global',G,'local',Obj);
 % a = filtesweeps(expt,0,'latency',latwin);
 datamat = a.wc.Vm - median(a.wc.Vm(:,baselinewin),2);
 nsweeps = size(a.wc.Vm,1);
-
+%%
 spikelatency = NaN(nsweeps,1);
 spikecount = zeros(nsweeps,1);
 for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
-
-   findspk = find(a.wc.Spikes(isweep,spikeswin));
-   if ~isempty(findspk) %there was a spike on this trial
-      
-       spikelatency(isweep) =  (min(findspk) + spikeswin(1)) * expt.meta.dt *1000;
-         spikecount(isweep) = size(findspk,2);
+    
+    if isfield(a.wc,'Spikes')
+        findspk = find(a.wc.Spikes(isweep,spikeswin));
+        if ~isempty(findspk) %there was a spike on this trial
+            
+            spikelatency(isweep) =  (min(findspk) + spikeswin(1)) * expt.meta.dt *1000;
+            spikecount(isweep) = size(findspk,2);
+        end
     end
 end
+
+figure;
+hold on
+scatter(a.sweeps.position,spikelatency- stimonset_t*1000 + 0.0045*1000)
+xlabel('position')
+ylabel('FSL msec')
+title(['global:' num2str(G) '; Obj:' num2str(Obj)])
+% set(gca,'XLim',[(stimonset_t+0.002)*1000, (stimonset_t+0.008)*1000] )
+set(gca,'YLim',[(0.0045)*1000, (0.015)*1000] )
 %%
 figure;
 hold on
@@ -69,24 +96,40 @@ title(['global:' num2str(G) '; Obj:' num2str(Obj)])
 % ylabel('FSL msec')
 
 
- subplot(1,3,3);
+subplot(1,3,3);
 % figure;
 hold on
 for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
-
-   findspk = find(a.wc.Spikes(isweep,:));
-%     if isempty(findspk)
-       stimdata = thisdata(stimonset_samp:stimonset_samp+600);
-         line(xtime- stimonset_t*1000 + 0.0045*1000,thisdata+(a.sweeps.position(isweep)*50),'color','k');
-%    end
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    %     if isempty(findspk)
+    stimdata = thisdata(stimonset_samp:stimonset_samp+600);
+    line(xtime- stimonset_t*1000 + 0.0045*1000,thisdata+(a.sweeps.position(isweep)*50),'color','k');
+    %    end
 end
 axis tight
 % set(gca,'XLim',[(stimonset_t+0.002)*1000, (stimonset_t+0.008)*1000] )
 set(gca,'XLim',[(0.0045)*1000, (0.015)*1000] )
 % end
+
+
+figure;
+hold on
+for isweep = 1:nsweeps
+    thisdata = datamat(isweep,:);
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    %     if isempty(findspk)
+    stimdata = thisdata(stimonset_samp:stimonset_samp+600);
+    line(xtime- stimonset_t*1000 + 0.0045*1000,thisdata+(a.sweeps.position(isweep)*500),'color','k');
+    %    end
+end
+axis tight
+% set(gca,'XLim',[(stimonset_t+0.002)*1000, (stimonset_t+0.008)*1000] )
+set(gca,'XLim',[(0.0045)*1000, (0.030)*1000] )
 %% spikes with graded global
-a = filtesweeps(expt,0,'latency',latwin,'time', [600:0.001: 780]);%]); 
+a = filtesweeps(expt,0,'latency',latwin,'time', [340:0.001: 525]);%]);
 
 nsweeps = size(a.wc.Vm,1);
 
@@ -100,21 +143,21 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-   findspk = find(a.wc.Spikes(isweep,spikeswin));
-   if ~isempty(findspk) %there was a spike on this trial
-      
-       spikelatency(isweep) =  (min(findspk) + spikeswin(1)) * expt.meta.dt *1000;
-         spikecount(isweep) = size(findspk,2);
+    
+    findspk = find(a.wc.Spikes(isweep,spikeswin));
+    if ~isempty(findspk) %there was a spike on this trial
+        
+        spikelatency(isweep) =  (min(findspk) + spikeswin(1)) * expt.meta.dt *1000;
+        spikecount(isweep) = size(findspk,2);
     end
 end
 
-figure;scatter(spikelatency,stimamp)
+figure;scatter(spikelatency-stimonset_t*1000 + 0.0045*1000,stimamp)
 ylabel('artifact')
 xlabel('FSL msec')
 axis tight
-% set(gca,'XLim',[77,83])
-set(gca,'XLim',[(stimonset_t+0.002)*1000, (stimonset_t+0.008)*1000] )
+set(gca,'XLim',[7,20])
+% set(gca,'XLim',[(stimonset_t+0.002)*1000, (stimonset_t+0.008)*1000] )
 
 figure;scatter(spikecount,stimamp)
 ylabel('artifact')
@@ -129,12 +172,12 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-   findspk = find(a.wc.Spikes(isweep,:));
-%     if isempty(findspk)
-       stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
-         line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
-%    end
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    %     if isempty(findspk)
+    stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+    line(xtime-stimonset_t*1000 + 0.0045*1000,thisdata+(stimamp(isweep)*50),'color','k');
+    %    end
 end
 axis tight
 
@@ -143,19 +186,71 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-   findspk = find(a.wc.Spikes(isweep,:));
+    
+    findspk = find(a.wc.Spikes(isweep,:));
     if isempty(findspk)
-       stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
-         line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
-   end
+        stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+        line(xtime-stimonset_t*1000 + 0.0045*1000,thisdata+(stimamp(isweep)*100),'color','k');
+    end
 end
 axis tight
+
 
 figure;line(xtime,datamat')
 % figure;scatter(spikecount,spikelatency)
 % xlabel('spike count')
 % ylabel('FSL msec')
+
+%% sort afferent psps by onset latency
+dvdtwin = [1000:1100];
+thismax = [];
+onsetind = [];
+for isweep = 1:nsweeps
+    thisdata = datamat(isweep,:);
+    
+    stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    
+    maxdvdt = max(diff(thisdata(dvdtwin)));
+    i = min(find(diff(thisdata(artifactwin(end):artifactwin(end)+600))>(maxdvdt*2)));
+    if ~isempty(i)
+        onsetind(isweep) = artifactwin(end)+i;
+    end
+    if isempty(i);
+        onsetind(isweep) = artifactwin(end);
+    end
+    
+    if isempty(findspk)
+        stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+        thismax(isweep) = max(stimdata);
+        %           line(xtime-stimonset_t*1000 + 0.0045*1000,thisdata+onsetind(isweep),'color','k');
+    end
+end
+[i,x] = sort(onsetind,2,'descend');
+sumdata = nan(nsweeps,1);
+figure;hold on
+plotind = 1;
+for isweep = 1:nsweeps
+    sortedind = x(isweep);
+    scaledmat = datamat./max(thismax);
+    thisdata = scaledmat(sortedind,:);
+    findspk = find(a.wc.Spikes(sortedind,:));
+    if isempty(findspk)
+        line(xtime-stimonset_t*1000 + 0.0045*1000,thisdata+(plotind/5)','color','k');
+        plotind = plotind+1;
+        
+        stimdata = thisdata(artifactwin(end):artifactwin(end)+300);
+        sumdata(isweep) = sum(stimdata);
+    end
+end
+axis tight
+
+figure;
+scatter((i*a.meta.dt)*1000-stimonset_t*1000 + 0.0045*1000,sumdata)
+xlabel('onset')
+ylabel('sum psp')
+
 
 %%
 % figure;hold on
@@ -169,19 +264,19 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-   findspk = find(a.wc.Spikes(isweep,:));
-   if isempty(findspk)
-       stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
-       searchind = find(stimdata == max(stimdata));
-       peakval(isweep) = max(stimdata);
-       peaklat(isweep) = searchind;
-       onsetlat(isweep) = max(find(stimdata ==min(stimdata(1:searchind))));
-       dvdt(isweep) = (peakval(isweep) - stimdata(onsetlat(isweep)))/(peaklat(isweep) - onsetlat(isweep))*expt.meta.dt;
-       halfheight = stimdata(peaklat(isweep)) - (stimdata(peaklat(isweep))-stimdata(onsetlat(isweep)))/2; 
-       halfwidth(isweep) = (max(find(stimdata<halfheight)) - min(find(stimdata>halfheight)))*expt.meta.dt*1000;
-       %    line(xtime,thisdata+(stimamp(isweep)*2),'color','k');
-   end
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    if isempty(findspk)
+        stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+        searchind = find(stimdata == max(stimdata));
+        peakval(isweep) = max(stimdata);
+        peaklat(isweep) = searchind;
+        onsetlat(isweep) = max(find(stimdata ==min(stimdata(1:searchind))));
+        dvdt(isweep) = (peakval(isweep) - stimdata(onsetlat(isweep)))/(peaklat(isweep) - onsetlat(isweep))*expt.meta.dt;
+        halfheight = stimdata(peaklat(isweep)) - (stimdata(peaklat(isweep))-stimdata(onsetlat(isweep)))/2;
+        halfwidth(isweep) = (max(find(stimdata<halfheight)) - min(find(stimdata>halfheight)))*expt.meta.dt*1000;
+        %    line(xtime,thisdata+(stimamp(isweep)*2),'color','k');
+    end
 end
 peaklat = (peaklat+(artifactwin(end)-artifactwin(1)))*expt.meta.dt*1000;
 onsetlat = (onsetlat+(artifactwin(end)-artifactwin(1)))*expt.meta.dt*1000;
@@ -191,12 +286,12 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-   findspk = find(a.wc.Spikes(isweep,:));
-%    if isempty(findspk)
-       stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
-         line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
-%    end
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    %    if isempty(findspk)
+    stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+    line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
+    %    end
 end
 axis tight
 
@@ -235,19 +330,19 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-   findspk = find(a.wc.Spikes(isweep,:));
-%     if isempty(findspk)
-       stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
-         line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
-%    end
+    
+    findspk = find(a.wc.Spikes(isweep,:));
+    %     if isempty(findspk)
+    stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+    line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
+    %    end
 end
 axis tight
 %%
-a = filtesweeps(expt,0,'time', [146.52:0.001: 158.61]);%]); 
-b = filtesweeps(expt,0,'time', [161.47:0.001: 178.87]);%]); 
-c = filtesweeps(expt,0,'time', [180.17:0.001: 198.15]);%]); 
-d = filtesweeps(expt,0,'time', [200.89:0.001: 238.83]);%]); 
+a = filtesweeps(expt,0,'time', [146.52:0.001: 158.61]);%]);
+b = filtesweeps(expt,0,'time', [161.47:0.001: 178.87]);%]);
+c = filtesweeps(expt,0,'time', [180.17:0.001: 198.15]);%]);
+d = filtesweeps(expt,0,'time', [200.89:0.001: 238.83]);%]);
 
 nsweeps = size(a.wc.Vm,1);
 
@@ -271,9 +366,9 @@ axis tight
 title('LD')
 set(gca,'YLim',[-5,50])
 
-a = filtesweeps(expt,0,'time', [325.01:0.001: 337.76]);%]); 
+a = filtesweeps(expt,0,'time', [325.01:0.001: 337.76]);%]);
 datamatA = a.wc.Vm - median(a.wc.Vm(:,baselinewin),2);
-b = filtesweeps(expt,0,'time', [343.17:0.001: 372.87]);%]); 
+b = filtesweeps(expt,0,'time', [343.17:0.001: 372.87]);%]);
 datamatB = b.wc.Vm - median(b.wc.Vm(:,baselinewin),2);
 figure;hold on
 line(xtime,datamatA','color','k')
@@ -284,9 +379,9 @@ title('SD not hyperpol')
 % 325.01	337.76
 % 343.17	372.87
 
-a = filtesweeps(expt,0,'time', [384.69:0.001: 418.96]);%]); 
+a = filtesweeps(expt,0,'time', [384.69:0.001: 418.96]);%]);
 datamatA = a.wc.Vm - median(a.wc.Vm(:,baselinewin),2);
-b = filtesweeps(expt,0,'time', [422.31:0.001: 469.63]);%]); 
+b = filtesweeps(expt,0,'time', [422.31:0.001: 469.63]);%]);
 datamatB = b.wc.Vm - median(b.wc.Vm(:,baselinewin),2);
 figure;hold on
 line(xtime,datamatA','color','k')
@@ -300,12 +395,12 @@ title('SD hyperpol again and 30um?')
 
 
 
-% 
+%
 % figure;hold on
 % for isweep = 1:nsweeps
 %     thisdata = datamat(isweep,:);
-%     
-%    
+%
+%
 %        stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
 %          line(xtime,thisdata+(a.sweeps.position(isweep)*100),'color','k');
 % end
@@ -315,10 +410,10 @@ for isweep = 1:nsweeps
     thisdata = datamat(isweep,:);
     
     stimamp(isweep) = max(thisdata(artifactwin)) - min(thisdata(artifactwin));
-
-       stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
-         line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
-
+    
+    stimdata = thisdata(artifactwin(end):artifactwin(end)+600);
+    line(xtime,thisdata+(stimamp(isweep)*5),'color','k');
+    
 end
 axis tight
 

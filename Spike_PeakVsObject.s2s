@@ -1,0 +1,10 @@
+var v70%; 'View created by MeasureToXY
+var win1$ := "Cursor(5)";
+var win2$ := "Cursor(6)";
+v70%:=MeasureToXY(14, 1, 0, 1, 0);
+MeasureX(100, 8, win1$, "0"); 'value on x measurement channel
+MeasureY(14, 4, win1$, win2$); 'peak on y measurement channel
+MeasureChan(1,"Channel 1",0);
+WindowVisible(1);
+Process(View(-1).Cursor(7), View(-1).Cursor(8), 0, 1);
+Window(67.3278, 0.983607,99.2171, 35.847);

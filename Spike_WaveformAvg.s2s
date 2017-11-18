@@ -1,0 +1,9 @@
+'Waveform Average between cursors 7 and 8 using trigevt
+var wavchan% := 4;
+var trigchan% := 1;
+var v32%; 'View created by SetAverage
+v32%:=SetAverage(wavchan%,2600*3,0.01, trigchan%,5,1);
+WindowVisible(1);
+Process(View(-1).Cursor(7), View(-1).Cursor(8), 0, 1);
+Window(63.6743, 0.983607,99.2171, 38.3607);
+

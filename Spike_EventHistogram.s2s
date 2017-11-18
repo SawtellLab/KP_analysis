@@ -1,0 +1,8 @@
+' Spikes histogram between curosr 7 and 8
+var v45%; 'View created by SetPsth
+var spkchan% := 10;
+var trigchan% := 1;
+v45%:=SetPsth(spkchan%,1300*1,0.0001,0.01, trigchan%,3, 8);
+WindowVisible(1);
+Process(View(-1).Cursor(7), View(-1).Cursor(8), 0, 1);
+Window(63.6743, 0.983607,99.2171, 38.3607);
