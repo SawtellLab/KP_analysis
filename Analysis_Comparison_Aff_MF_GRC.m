@@ -123,11 +123,26 @@ for i = 1:size(datamat,1)
    line(xtime(plotwin)+offset,datamat(i,plotwin),'color','k')
 end
 
-%%
+%% GRC
+exptname ='20171031_004';
+% load(['C:\Users\kperks\spikedata\matdata\' exptname '\' exptname '.mat'])
+load(['/Users/kperks/matdata/' exptname '/' exptname '.mat'])
+
+timerange = [];%[753:0.0001:796];%[763.5:0.0001:815.72];%
+Irange = [];%[-20:-18]; %-47;
+trialrange = [332:430];
+
+for isweep = 1:size(expt.sweeps.time,1)
+   expt.sweeps.global(isweep) = 450;
+   expt.sweeps.local(isweep) = -20;
+end
 
 G = 450;%Globall(i); %
 Obj = -20;%Objall(i); % 
 
+  onsetind = [];
+  peakval = [];
+  
 stimonset_t = 0.0045;
 
 stimonset_samp = round(stimonset_t/expt.meta.dt);
@@ -137,35 +152,48 @@ artifactwin = [stimonset_samp: stimonset_samp + 35] ; %[1500:1535];%
 baselinewin = [1:20]; %[1400:1500];%
 spikeswin = [artifactwin(end):artifactwin(end) + 0.05/expt.meta.dt];
 
+nsweeps = size(expt.wc.Vm,1);
 nsamps = size(expt.wc.Vm,2);
 % datamat = expt.wc.Vm;% - median(expt.wc.Vm(:,baselinewin),2);
 
-Irange = [79]; %-47; 
-a = filtesweeps(expt,0,'latency',latwin,'global',G,'local',Obj);
-if ~isempty(timerange)
-  a = filtesweeps(a,0,'time',timerange);
+plotwin =[artifactwin(end):artifactwin(end)+round(0.03/expt.meta.dt)];
+
+% a = filtesweeps(expt,0,'latency',latwin,'global',G,'local',Obj);
+if ~isempty(trialrange)
+  a = filtesweeps(expt,0,'trial',trialrange);
 end
-if ~isempty(Irange)
-  a = filtesweeps(a,0,'current',Irange);
-end
+% if ~isempty(timerange)
+%   a = filtesweeps(a,0,'time',timerange);
+% end
+% if ~isempty(Irange)
+%   a = filtesweeps(a,0,'current',Irange);
+% end
 datamat = a.wc.Vm - median(a.wc.Vm(:,baselinewin),2);
 nsweeps = size(a.wc.Vm,1);
 
 xtime = [1:size(a.wc.Vm,2)]*expt.meta.dt*1000;
-figure;line(xtime,datamat','color','k');
+figure;line(xtime,datamat','color','k')
 
-spikelatency = [];
- for isweep = 1:nsweeps
-            findspk = find(a.wc.Spikes(isweep,spikeswin));
-            if ~isempty(findspk) %there was a spike on this trial
-                spikelatency(isweep) =  (min(findspk) + spikeswin(1)) * expt.meta.dt *1000;
-            end
-             if isempty(findspk) 
-                 spikelatency(isweep) = stimonset_t * 1000;
-             end
- end
- 
- 
+for i = 1:size(datamat,1)
+    thisdata = datamat(i,plotwin);
+  onsetind(i)= min(find(thisdata>1.5));
+  peakval(i) = max(thisdata);
+end
+
+%%
+
 figure;
-scatter(a.sweeps.position,spikelatency)
-ylabel('spike latency')
+scatter(a.sweeps.position,((artifactwin(end)+onsetind)*expt.meta.dt*1000)-(stimonset_t*1000))
+ylabel('onset')
+
+figure;
+scatter(a.sweeps.position,peakval)
+ylabel('peakval')
+
+figure;hold on
+for i = 1:size(datamat,1)
+    
+    scaley = 100;
+    offset = (a.sweeps.position(i))*scaley;
+   line(xtime(plotwin)+offset,datamat(i,plotwin),'color','k')
+end
